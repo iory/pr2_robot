@@ -285,6 +285,7 @@ void *controlLoop(void *)
 
   realtime_tools::RealtimePublisher<diagnostic_msgs::DiagnosticArray> publisher(node, "/diagnostics", 2);
   realtime_tools::RealtimePublisher<std_msgs::Float64> *rtpublisher = 0;
+  realtime_tools::RealtimePublisher<std_msgs::Float64> *avg_rt_loop_frequency_rtpublisher = 0;
 
   // Realtime loop should be running at least 750Hz
   // Calculate realtime loop frequency every 200mseec
@@ -306,6 +307,7 @@ void *controlLoop(void *)
 
   if (g_options.stats_){
     rtpublisher = new realtime_tools::RealtimePublisher<std_msgs::Float64>(node, "realtime", 2);
+    avg_rt_loop_frequency_rtpublisher = new realtime_tools::RealtimePublisher<std_msgs::Float64>(node, "avg_rt_loop_frequency", 2);
   }
 
   // Initialize the hardware interface
@@ -450,6 +452,14 @@ void *controlLoop(void *)
       // Use last X samples of frequency when deciding whether or not to halt
       rt_loop_history.sample(rt_loop_frequency);
       double avg_rt_loop_frequency = rt_loop_history.average();
+      if (avg_rt_loop_frequency_rtpublisher) {
+        if (avg_rt_loop_frequency_rtpublisher->trylock())
+          {
+            avg_rt_loop_frequency_rtpublisher->msg_.data = avg_rt_loop_frequency;
+            avg_rt_loop_frequency_rtpublisher->unlockAndPublish();
+          }
+      }
+
       if (avg_rt_loop_frequency < min_acceptable_rt_loop_frequency)
       {
         g_halt_motors = true;
@@ -538,6 +548,7 @@ void *controlLoop(void *)
 end:
   publisher.stop();
   delete rtpublisher;
+  delete avg_rt_loop_frequency_rtpublisher;
 
   ros::shutdown();
 
