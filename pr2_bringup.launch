@@ -1,0 +1,40 @@
+<launch>
+
+  <!-- Robot Description -->
+  <param name="robot_description" textfile="/home/iory/ros/pr2/src/pr2_robot/robot.xml" />
+
+  <remap from="/diagnostics" to="/$(optenv ROS_NAMESPACE /)/diagnostics" />
+  <remap from="/diagnostics_agg" to="/$(optenv ROS_NAMESPACE /)/diagnostics_agg" />
+
+
+  <node name="realtime_loop"
+        launch-prefix="ethercat_grant"
+        pkg="pr2_ethercat" type="pr2_ethercat"
+        args="-i enx207bd22e5957 -r robot_description -s" output="screen" >
+    <param name="realtime_socket_timeout" value="5000" />
+  </node>
+
+  <!-- Controller Manager -->
+  <include file="$(find pr2_controller_manager)/controller_manager.launch" />
+
+  <node name="calibrate_pr2" pkg="pr2_bringup" type="calibrate_pr2.py" output="screen"
+        args="$(find pr2_controller_configuration)/pr2_calibration_controllers.yaml $(find pr2_controller_configuration)/pr2_joint_position_controllers.yaml"/>
+
+  <!-- Default controllers -->
+  <include file="$(find pr2_controller_configuration)/pr2_default_controllers.launch" />
+
+  <!-- Buffer Server -->
+  <node pkg="tf2_ros" type="buffer_server" name="tf2_buffer_server" output="screen">
+    <param name="buffer_size" value="120.0"/>
+  </node>
+
+  <!--   <!-\- Diagnostics aggregation -\-> -->
+  <!-- <node pkg="diagnostic_aggregator" type="aggregator_node"  name="diag_agg"> -->
+  <!--   <rosparam command="load" file="$(find pr2_bringup)/jsk_pr2_warning/jsk_pr2_analyzers.yaml"/> -->
+  <!-- </node> -->
+
+  <!-- <!-\- Dashboard aggregation -\-> -->
+  <!-- <node pkg="pr2_dashboard_aggregator" type="dashboard_aggregator.py" name="pr2_dashboard_aggregator"/> -->
+
+
+</launch>
